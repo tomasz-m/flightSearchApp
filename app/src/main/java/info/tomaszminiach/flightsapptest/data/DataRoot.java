@@ -1,21 +1,21 @@
 package info.tomaszminiach.flightsapptest.data;
 
 import com.google.gson.annotations.SerializedName;
-import io.realm.RealmList;
-import io.realm.RealmObject;
 
-public class DataRoot extends RealmObject {
+import java.util.List;
+
+public class DataRoot{
     public static final String FLIGHTS = "flights";
 
     @SerializedName("flights")
-    private RealmList<Flights> flights;
+    private List<Flights> flights;
 
     public DataRoot(){ }
 
-    public void setFlights(RealmList<Flights> flights){
+    public void setFlights(List<Flights> flights){
         this.flights = flights;
     }
-    public RealmList<Flights> getFlights(){
+    public List<Flights> getFlights(){
         return this.flights;
     }
 }

@@ -11,7 +11,7 @@ import java.util.Locale;
 public class DateHelper {
 
 
-    public static final String serverDateFormatString =  "dd-MM-yyyy HH:mm:ss";
+    public static final String serverDateFormatString =  "yyyy-MM-dd";
     public static final SimpleDateFormat serverDateFormat = new SimpleDateFormat(serverDateFormatString, Locale.getDefault());
     public static final SimpleDateFormat displayDateFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
 

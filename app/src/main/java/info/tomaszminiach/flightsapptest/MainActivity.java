@@ -1,26 +1,32 @@
 package info.tomaszminiach.flightsapptest;
 
-import android.content.Context;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.format.DateUtils;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Calendar;
+import java.util.List;
 
+import info.tomaszminiach.flightsapptest.data.DataProvider;
+import info.tomaszminiach.flightsapptest.data.DataRoot;
 import info.tomaszminiach.flightsapptest.data.Flights;
 import info.tomaszminiach.flightsapptest.helper.DateHelper;
 import info.tomaszminiach.flightsapptest.helper.DatePickerFragment;
 import info.tomaszminiach.flightsapptest.helper.SimpleSingleObserver;
-import io.realm.RealmBaseAdapter;
-import io.realm.RealmResults;
+import info.tomaszminiach.flightsapptest.sync.RestClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SimpleSingleObserver.SimpleObserver {
 
@@ -100,6 +106,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     return;
                 }
 
+                RestClient restClient = new RestClient();
+                RestClient.FlightsService webInterface = restClient.getWebInterface();
+                String fromDate = DateHelper.formatForServer(fromDateCalendar);
+                String toDate = DateHelper.formatForServer(toDateCalendar);
+                Call<DataRoot> flights = webInterface.getFlights("DUB", "DUB", fromDate, toDate);
+                flights.enqueue(new Callback<DataRoot>() {
+                    @Override
+                    public void onResponse(Call<DataRoot> call, Response<DataRoot> response) {
+                        for(Flights f : response.body().getFlights()){
+                            Log.d(">>>flight","price "+f.getPrice());
+                        }
+                        DataProvider.clearFlights();
+                        DataProvider.setFlights(response.body().getFlights());
+                        SimpleSingleObserver.sendEvent("NEW_DATA",null);
+                    }
+
+                    @Override
+                    public void onFailure(Call<DataRoot> call, Throwable t) {
+
+                    }
+                });
+
                 break;
         }
 
@@ -114,6 +142,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         );
     }
 
+    private void setData(){
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        MyAdapter myAdapter = new MyAdapter(DataProvider.getFlights());
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
+        recyclerView.setLayoutManager(mLayoutManager);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recyclerView.setAdapter(myAdapter);
+    }
+
     @Override
     public void onEvent(String eventTag, Object o) {
         if(TAG_START_BUTTON.equals(eventTag)){
@@ -122,66 +159,131 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }else if(TAG_END_BUTTON.equals(eventTag)){
             toDateCalendar = (Calendar) o;
             refreshView();
+        }else if("NEW_DATA".equals(eventTag)){
+            setData();
         }
     }
 
-    public static class FlightsAdapter extends RealmBaseAdapter<Flights> {
 
-        private LayoutInflater mInflater;
+    public static class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
+        private List<Flights> mDataset;
 
-        /**
-         * ViewHolder class for layout.<br />
-         * <br />
-         * Auto-created on 2016-06-22 17:19:07 by Android Layout Finder
-         * (http://www.buzzingandroid.com/tools/android-layout-finder)
-         */
-        private static class ViewHolder {
-            public final LinearLayout rootView;
+        // Provide a reference to the views for each data item
+        // Complex data items may need more than one view per item, and
+        // you provide access to all the views for a data item in a view holder
+
+        public static class ViewHolder  extends RecyclerView.ViewHolder {
+            public final View rootView;
             public final TextView textTimeFrom;
             public final TextView textTimeTo;
             public final TextView textPrice;
 
-            private ViewHolder(LinearLayout rootView, TextView textTimeFrom, TextView textTimeTo, TextView textPrice) {
+            private ViewHolder(View rootView) {
+                super(rootView);
                 this.rootView = rootView;
-                this.textTimeFrom = textTimeFrom;
-                this.textTimeTo = textTimeTo;
-                this.textPrice = textPrice;
+                this.textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
+                this.textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
+                this.textPrice = (TextView)rootView.findViewById( R.id.textPrice );
             }
 
-            public static ViewHolder create(LinearLayout rootView) {
-                TextView textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
-                TextView textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
-                TextView textPrice = (TextView)rootView.findViewById( R.id.textPrice );
-                return new ViewHolder( rootView, textTimeFrom, textTimeTo, textPrice );
-            }
+
         }
 
-        public FlightsAdapter(Context context, RealmResults<Flights> data, boolean automaticUpdate, LayoutInflater mInflater) {
-            super(context, data, automaticUpdate);
-            this.mInflater = mInflater;
+        // Provide a suitable constructor (depends on the kind of dataset)
+        public MyAdapter(List<Flights> myDataset) {
+            mDataset = myDataset;
         }
 
+        // Create new views (invoked by the layout manager)
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            final ViewHolder vh;
-            if ( convertView == null ) {
-                View view = mInflater.inflate( R.layout.item_flight, parent, false );
-                vh = ViewHolder.create( (LinearLayout)view );
-                view.setTag( vh );
-            } else {
-                vh = (ViewHolder)convertView.getTag();
-            }
+        public MyAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
+                                                       int viewType) {
+            // create a new view
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_flight, parent, false);
 
-            Flights item = getItem( position );
+            ViewHolder vh = new ViewHolder(v);
+            return vh;
+        }
 
+        // Replace the contents of a view (invoked by the layout manager)
+        @Override
+        public void onBindViewHolder(ViewHolder vh, int position) {
+            Flights item = mDataset.get(position);
             vh.textTimeFrom.setText(DateHelper.formatToDisplay(item.getDateFrom()));
             vh.textTimeTo.setText(DateHelper.formatToDisplay(item.getDateTo()));
             String priceString = item.getCurrency()+ String.format("%.02f", item.getPrice());
             vh.textPrice.setText(priceString);
 
-            return vh.rootView;
+        }
+
+        // Return the size of your dataset (invoked by the layout manager)
+        @Override
+        public int getItemCount() {
+            return mDataset.size();
         }
     }
 
+
+
+//
+//    public static class FlightsAdapter extends RealmBaseAdapter<Flights> {
+//
+//        private LayoutInflater mInflater;
+//
+//        /**
+//         * ViewHolder class for layout.<br />
+//         * <br />
+//         * Auto-created on 2016-06-22 17:19:07 by Android Layout Finder
+//         * (http://www.buzzingandroid.com/tools/android-layout-finder)
+//         */
+//        private static class ViewHolder {
+//            public final LinearLayout rootView;
+//            public final TextView textTimeFrom;
+//            public final TextView textTimeTo;
+//            public final TextView textPrice;
+//
+//            private ViewHolder(LinearLayout rootView, TextView textTimeFrom, TextView textTimeTo, TextView textPrice) {
+//                this.rootView = rootView;
+//                this.textTimeFrom = textTimeFrom;
+//                this.textTimeTo = textTimeTo;
+//                this.textPrice = textPrice;
+//            }
+//
+//            public static ViewHolder create(LinearLayout rootView) {
+//                TextView textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
+//                TextView textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
+//                TextView textPrice = (TextView)rootView.findViewById( R.id.textPrice );
+//                return new ViewHolder( rootView, textTimeFrom, textTimeTo, textPrice );
+//            }
+//        }
+//
+//        public FlightsAdapter(Context context, RealmResults<Flights> data, boolean automaticUpdate, LayoutInflater mInflater) {
+//            super(context, data, automaticUpdate);
+//            this.mInflater = mInflater;
+//        }
+//
+//        @Override
+//        public View getView(int position, View convertView, ViewGroup parent) {
+//            final ViewHolder vh;
+//            if ( convertView == null ) {
+//                View view = mInflater.inflate( R.layout.item_flight, parent, false );
+//                vh = ViewHolder.create( (LinearLayout)view );
+//                view.setTag( vh );
+//            } else {
+//                vh = (ViewHolder)convertView.getTag();
+//            }
+//
+//            Flights item = getItem( position );
+//
+//            vh.textTimeFrom.setText(DateHelper.formatToDisplay(item.getDateFrom()));
+//            vh.textTimeTo.setText(DateHelper.formatToDisplay(item.getDateTo()));
+//            String priceString = item.getCurrency()+ String.format("%.02f", item.getPrice());
+//            vh.textPrice.setText(priceString);
+//
+//            return vh.rootView;
+//        }
+//    }
+//
 
 }

@@ -1,10 +1,10 @@
 package info.tomaszminiach.flightsapptest.data;
 
 import com.google.gson.annotations.SerializedName;
-import java.util.Date;
-import io.realm.RealmObject;
 
-public class Flights extends RealmObject {
+import java.util.Date;
+
+public class Flights {
     public static final String DATE_FROM = "dateFrom";
     public static final String DATE_TO = "dateTo";
     public static final String CURRENCY = "currency";
