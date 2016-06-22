@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">FlightsApp Test</string>
+    <string name="errorAirportCode">MIN 3 LETTERS</string>
+    <string name="notCompleted">Not completed</string>
+</resources>
