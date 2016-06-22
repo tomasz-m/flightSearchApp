@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.widget.DatePicker;
 
 import java.util.Calendar;
-import java.util.Date;
 
 public class DatePickerFragment extends DialogFragment
         implements DatePickerDialog.OnDateSetListener {
@@ -47,6 +46,7 @@ public class DatePickerFragment extends DialogFragment
     public void onDateSet(DatePicker view, int year, int month, int day) {
         Calendar c = Calendar.getInstance();
         c.set(year,month,day);
+        //I know this dependency to the SimpleSingleObserver is not nice, would be better to
         SimpleSingleObserver.sendEvent(getTag(),c);
     }
 }

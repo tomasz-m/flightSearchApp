@@ -5,7 +5,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +32,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final String TAG_START_BUTTON = "START";
     private static final String TAG_END_BUTTON = "END";
 
+    private static final String TAG_NEW_DATA = "NEW_DATA";
+
     private Calendar fromDateCalendar, toDateCalendar;
+
+    private View searchButton, progressBar;
+    RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,20 +46,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         findViewById(R.id.buttonDateFrom).setOnClickListener(this);
         findViewById(R.id.buttonDateTo).setOnClickListener(this);
-        findViewById(R.id.buttonSearch).setOnClickListener(this);
+        searchButton = findViewById(R.id.buttonSearch);
+        searchButton.setOnClickListener(this);
+        progressBar = findViewById(R.id.progressBar);
+        recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
 
         fromDateCalendar = Calendar.getInstance();
         toDateCalendar = Calendar.getInstance();
-        if(savedInstanceState!=null){
+        if (savedInstanceState != null) {
             long fromMilliseconds = savedInstanceState.getLong(TAG_START_BUTTON);
             long toMilliseconds = savedInstanceState.getLong(TAG_END_BUTTON);
-            if(fromMilliseconds>0)
+            if (fromMilliseconds > 0)
                 fromDateCalendar.setTimeInMillis(fromMilliseconds);
-            if(toMilliseconds>0)
+            if (toMilliseconds > 0)
                 toDateCalendar.setTimeInMillis(toMilliseconds);
         }
 
-        refreshView();
+        refreshButtons();
+        displayData();
     }
 
     @Override
@@ -69,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onResume() {
         super.onResume();
+        //subscribe to SimpleSingleObserver
         SimpleSingleObserver.subscribe(this);
     }
 
@@ -80,87 +89,131 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.buttonDateFrom:
-                DatePickerFragment.start(0,TAG_START_BUTTON,getFragmentManager());
+                DatePickerFragment.start(0, TAG_START_BUTTON, getFragmentManager());
                 break;
             case R.id.buttonDateTo:
-                DatePickerFragment.start(0,TAG_END_BUTTON,getFragmentManager());
+                DatePickerFragment.start(0, TAG_END_BUTTON, getFragmentManager());
                 break;
             case R.id.buttonSearch:
-                EditText editTextFrom = (EditText)findViewById( R.id.editTextFrom );
-                EditText editTextTo = (EditText)findViewById( R.id.editTextTo );
-                if(editTextFrom==null || editTextTo==null)
-                    return;
-                boolean completed=true;
-                if(editTextFrom.length()<3) {
-                    editTextFrom.setError(getString(R.string.errorAirportCode));
-                    completed=false;
-                }
-                if(editTextTo.length()<3) {
-                    editTextTo.setError(getString(R.string.errorAirportCode));
-                    completed=false;
-                }
-                if(!completed) {
-                    Toast.makeText(this, R.string.notCompleted,Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                RestClient restClient = new RestClient();
-                RestClient.FlightsService webInterface = restClient.getWebInterface();
-                String fromDate = DateHelper.formatForServer(fromDateCalendar);
-                String toDate = DateHelper.formatForServer(toDateCalendar);
-                Call<DataRoot> flights = webInterface.getFlights("DUB", "DUB", fromDate, toDate);
-                flights.enqueue(new Callback<DataRoot>() {
-                    @Override
-                    public void onResponse(Call<DataRoot> call, Response<DataRoot> response) {
-                        for(Flights f : response.body().getFlights()){
-                            Log.d(">>>flight","price "+f.getPrice());
-                        }
-                        DataProvider.clearFlights();
-                        DataProvider.setFlights(response.body().getFlights());
-                        SimpleSingleObserver.sendEvent("NEW_DATA",null);
-                    }
-
-                    @Override
-                    public void onFailure(Call<DataRoot> call, Throwable t) {
-
-                    }
-                });
-
+                search();
                 break;
         }
 
     }
 
-    private void refreshView(){
-        ((Button)findViewById(R.id.buttonDateFrom)).setText(
+    private void search() {
+        EditText editTextFrom = (EditText) findViewById(R.id.editTextFrom);
+        EditText editTextTo = (EditText) findViewById(R.id.editTextTo);
+        if (editTextFrom == null || editTextTo == null)
+            return;
+        boolean completed = true;
+        if (editTextFrom.length() < 3) {
+            editTextFrom.setError(getString(R.string.errorAirportCode));
+            completed = false;
+        }
+        if (editTextTo.length() < 3) {
+            editTextTo.setError(getString(R.string.errorAirportCode));
+            completed = false;
+        }
+        if (fromDateCalendar == null || toDateCalendar == null || fromDateCalendar.after(toDateCalendar))
+            completed = false;
+        if (!completed) {
+            Toast.makeText(this, R.string.notCompleted, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        RestClient restClient = new RestClient();
+        RestClient.FlightsService webInterface = restClient.getWebInterface();
+        String fromDate = DateHelper.formatForServer(fromDateCalendar);
+        String toDate = DateHelper.formatForServer(toDateCalendar);
+        Call<DataRoot> flights = webInterface.getFlights(
+                editTextFrom.getText().toString(),
+                editTextTo.getText().toString(), fromDate, toDate);
+
+        DataProvider.clearFlights();
+        DataProvider.setSTATUS(DataProvider.STATUS_PROCESSING);
+        SimpleSingleObserver.sendEvent(TAG_NEW_DATA, null);
+        flights.enqueue(new Callback<DataRoot>() {
+            @Override
+            public void onResponse(Call<DataRoot> call, Response<DataRoot> response) {
+                DataProvider.setFlights(response.body().getFlights());
+                DataProvider.setSTATUS(DataProvider.STATUS_READY);
+                SimpleSingleObserver.sendEvent(TAG_NEW_DATA, null);
+            }
+
+            @Override
+            public void onFailure(Call<DataRoot> call, Throwable t) {
+                DataProvider.setSTATUS(DataProvider.STATUS_ERROR);
+                SimpleSingleObserver.sendEvent(TAG_NEW_DATA, null);
+            }
+        });
+    }
+
+    /**
+     * just to bind displayed date with one stored in private fields of this activity
+     */
+    private void refreshButtons() {
+        View errorView = findViewById(R.id.dateError);
+        if (fromDateCalendar != null && toDateCalendar != null && fromDateCalendar.after(toDateCalendar))
+            errorView.setVisibility(View.VISIBLE);
+        else
+            errorView.setVisibility(View.INVISIBLE);
+
+        ((Button) findViewById(R.id.buttonDateFrom)).setText(
                 DateHelper.formatToDisplay(fromDateCalendar)
         );
-        ((Button)findViewById(R.id.buttonDateTo)).setText(
+        ((Button) findViewById(R.id.buttonDateTo)).setText(
                 DateHelper.formatToDisplay(toDateCalendar)
         );
     }
 
-    private void setData(){
-        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
-        MyAdapter myAdapter = new MyAdapter(DataProvider.getFlights());
-        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
-        recyclerView.setLayoutManager(mLayoutManager);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        recyclerView.setAdapter(myAdapter);
+    /**
+     * displays flights on recycler view and checks status from custom data provider
+     * displays progress bar when data provider says that data are processed
+     */
+    private void displayData() {
+        if (DataProvider.getSTATUS() == DataProvider.STATUS_PROCESSING) {
+            searchButton.setVisibility(View.INVISIBLE);
+            progressBar.setVisibility(View.VISIBLE);
+            recyclerView.setAdapter(null);
+        } else if (DataProvider.getSTATUS() == DataProvider.STATUS_ERROR) {
+            searchButton.setVisibility(View.VISIBLE);
+            progressBar.setVisibility(View.INVISIBLE);
+            Toast.makeText(this, R.string.connectionProblem, Toast.LENGTH_SHORT).show();
+            recyclerView.setAdapter(null);
+        } else {
+            searchButton.setVisibility(View.VISIBLE);
+            progressBar.setVisibility(View.INVISIBLE);
+            if (DataProvider.getFlights() == null) {
+                recyclerView.setAdapter(null);
+                return;
+            }
+            MyAdapter myAdapter = new MyAdapter(DataProvider.getFlights());
+            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
+            recyclerView.setLayoutManager(mLayoutManager);
+            recyclerView.setItemAnimator(new DefaultItemAnimator());
+            recyclerView.setAdapter(myAdapter);
+        }
     }
 
+    /**
+     * Callback from my little custom event bus class SimpleSingleObserver
+     * @param eventTag
+     * @param o
+     */
     @Override
     public void onEvent(String eventTag, Object o) {
-        if(TAG_START_BUTTON.equals(eventTag)){
+
+        if (TAG_START_BUTTON.equals(eventTag)) {
             fromDateCalendar = (Calendar) o;
-            refreshView();
-        }else if(TAG_END_BUTTON.equals(eventTag)){
+            refreshButtons();
+        } else if (TAG_END_BUTTON.equals(eventTag)) {
             toDateCalendar = (Calendar) o;
-            refreshView();
-        }else if("NEW_DATA".equals(eventTag)){
-            setData();
+            refreshButtons();
+        } else if (TAG_NEW_DATA.equals(eventTag)) {
+            displayData();
         }
     }
 
@@ -168,11 +221,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public static class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
         private List<Flights> mDataset;
 
-        // Provide a reference to the views for each data item
-        // Complex data items may need more than one view per item, and
-        // you provide access to all the views for a data item in a view holder
-
-        public static class ViewHolder  extends RecyclerView.ViewHolder {
+        public static class ViewHolder extends RecyclerView.ViewHolder {
             public final View rootView;
             public final TextView textTimeFrom;
             public final TextView textTimeTo;
@@ -181,24 +230,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             private ViewHolder(View rootView) {
                 super(rootView);
                 this.rootView = rootView;
-                this.textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
-                this.textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
-                this.textPrice = (TextView)rootView.findViewById( R.id.textPrice );
+                this.textTimeFrom = (TextView) rootView.findViewById(R.id.textTimeFrom);
+                this.textTimeTo = (TextView) rootView.findViewById(R.id.textTimeTo);
+                this.textPrice = (TextView) rootView.findViewById(R.id.textPrice);
             }
-
-
         }
 
-        // Provide a suitable constructor (depends on the kind of dataset)
         public MyAdapter(List<Flights> myDataset) {
             mDataset = myDataset;
         }
 
-        // Create new views (invoked by the layout manager)
         @Override
         public MyAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
                                                        int viewType) {
-            // create a new view
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_flight, parent, false);
 
@@ -206,84 +250,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return vh;
         }
 
-        // Replace the contents of a view (invoked by the layout manager)
         @Override
         public void onBindViewHolder(ViewHolder vh, int position) {
             Flights item = mDataset.get(position);
             vh.textTimeFrom.setText(DateHelper.formatToDisplay(item.getDateFrom()));
             vh.textTimeTo.setText(DateHelper.formatToDisplay(item.getDateTo()));
-            String priceString = item.getCurrency()+ String.format("%.02f", item.getPrice());
+            String priceString = item.getCurrency() + String.format("%.02f", item.getPrice());
             vh.textPrice.setText(priceString);
 
         }
 
-        // Return the size of your dataset (invoked by the layout manager)
         @Override
         public int getItemCount() {
             return mDataset.size();
         }
     }
 
-
-
-//
-//    public static class FlightsAdapter extends RealmBaseAdapter<Flights> {
-//
-//        private LayoutInflater mInflater;
-//
-//        /**
-//         * ViewHolder class for layout.<br />
-//         * <br />
-//         * Auto-created on 2016-06-22 17:19:07 by Android Layout Finder
-//         * (http://www.buzzingandroid.com/tools/android-layout-finder)
-//         */
-//        private static class ViewHolder {
-//            public final LinearLayout rootView;
-//            public final TextView textTimeFrom;
-//            public final TextView textTimeTo;
-//            public final TextView textPrice;
-//
-//            private ViewHolder(LinearLayout rootView, TextView textTimeFrom, TextView textTimeTo, TextView textPrice) {
-//                this.rootView = rootView;
-//                this.textTimeFrom = textTimeFrom;
-//                this.textTimeTo = textTimeTo;
-//                this.textPrice = textPrice;
-//            }
-//
-//            public static ViewHolder create(LinearLayout rootView) {
-//                TextView textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
-//                TextView textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
-//                TextView textPrice = (TextView)rootView.findViewById( R.id.textPrice );
-//                return new ViewHolder( rootView, textTimeFrom, textTimeTo, textPrice );
-//            }
-//        }
-//
-//        public FlightsAdapter(Context context, RealmResults<Flights> data, boolean automaticUpdate, LayoutInflater mInflater) {
-//            super(context, data, automaticUpdate);
-//            this.mInflater = mInflater;
-//        }
-//
-//        @Override
-//        public View getView(int position, View convertView, ViewGroup parent) {
-//            final ViewHolder vh;
-//            if ( convertView == null ) {
-//                View view = mInflater.inflate( R.layout.item_flight, parent, false );
-//                vh = ViewHolder.create( (LinearLayout)view );
-//                view.setTag( vh );
-//            } else {
-//                vh = (ViewHolder)convertView.getTag();
-//            }
-//
-//            Flights item = getItem( position );
-//
-//            vh.textTimeFrom.setText(DateHelper.formatToDisplay(item.getDateFrom()));
-//            vh.textTimeTo.setText(DateHelper.formatToDisplay(item.getDateTo()));
-//            String priceString = item.getCurrency()+ String.format("%.02f", item.getPrice());
-//            vh.textPrice.setText(priceString);
-//
-//            return vh.rootView;
-//        }
-//    }
-//
 
 }

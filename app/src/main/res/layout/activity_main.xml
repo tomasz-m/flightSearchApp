@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="SELECT AIRPORTS" />
+        android:text="@string/select_airports" />
 
     <LinearLayout
         android:orientation="horizontal"
@@ -26,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="FROM" />
+            android:text="@string/from" />
 
         <EditText
             android:layout_width="70dp"
@@ -43,7 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="TO" />
+            android:text="@string/to" />
 
         <EditText
             android:layout_width="70dp"
@@ -53,7 +53,7 @@
             android:gravity="center"
             android:maxLength="3"
             android:id="@+id/editTextTo"
-            android:text="DUB" />
+            android:text="BCN" />
 
     </LinearLayout>
 
@@ -61,7 +61,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="SELECT DATES" />
+        android:text="@string/select_dates" />
 
     <LinearLayout
         android:orientation="horizontal"
@@ -73,36 +73,60 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="FROM" />
+            android:text="@string/from" />
 
         <Button
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:id="@+id/buttonDateFrom"
-            android:hint="CLICK" />
+            android:hint="@string/click" />
 
         <TextView
             android:padding="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="TO" />
+            android:text="@string/to" />
 
         <Button
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:id="@+id/buttonDateTo"
-            android:hint="CLICK"  />
+            android:hint="@string/click"  />
 
     </LinearLayout>
 
-    <Button
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:drawableLeft="@android:drawable/ic_menu_search"
-        android:text="SEARCH"
-        android:id="@+id/buttonSearch"
+        android:textSize="10sp"
+        android:layout_marginTop="-5dp"
+        android:layout_marginBottom="-3dp"
+        android:textColor="@color/colorAccent"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="@string/dateError"
+        android:id="@+id/dateError"
         android:layout_gravity="center_horizontal" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableLeft="@android:drawable/ic_menu_search"
+            android:text="@string/search"
+            android:id="@+id/buttonSearch"
+            android:layout_gravity="center_horizontal" />
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/progressBar"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
     <View
         android:layout_width="match_parent"

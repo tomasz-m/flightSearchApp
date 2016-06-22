@@ -5,7 +5,6 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
 public class DataRoot{
-    public static final String FLIGHTS = "flights";
 
     @SerializedName("flights")
     private List<Flights> flights;

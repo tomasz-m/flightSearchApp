@@ -2,4 +2,12 @@
     <string name="app_name">FlightsApp Test</string>
     <string name="errorAirportCode">MIN 3 LETTERS</string>
     <string name="notCompleted">Not completed</string>
+    <string name="connectionProblem">Connection problem</string>
+    <string name="select_airports">SELECT AIRPORTS (IATA CODES)</string>
+    <string name="from">FROM</string>
+    <string name="to">TO</string>
+    <string name="dateError">\'FROM\' date is later then \'TO\' date !</string>
+    <string name="click">CLICK</string>
+    <string name="select_dates">SELECT DATES</string>
+    <string name="search">SEARCH</string>
 </resources>

@@ -5,10 +5,6 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Date;
 
 public class Flights {
-    public static final String DATE_FROM = "dateFrom";
-    public static final String DATE_TO = "dateTo";
-    public static final String CURRENCY = "currency";
-    public static final String PRICE = "price";
 
     @SerializedName("dateFrom")
     private Date dateFrom;
