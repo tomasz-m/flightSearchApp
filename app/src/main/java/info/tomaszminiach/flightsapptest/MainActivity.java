@@ -1,17 +1,26 @@
 package info.tomaszminiach.flightsapptest;
 
+import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.format.DateUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Calendar;
 
+import info.tomaszminiach.flightsapptest.data.Flights;
 import info.tomaszminiach.flightsapptest.helper.DateHelper;
 import info.tomaszminiach.flightsapptest.helper.DatePickerFragment;
 import info.tomaszminiach.flightsapptest.helper.SimpleSingleObserver;
+import io.realm.RealmBaseAdapter;
+import io.realm.RealmResults;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SimpleSingleObserver.SimpleObserver {
 
@@ -115,4 +124,64 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             refreshView();
         }
     }
+
+    public static class FlightsAdapter extends RealmBaseAdapter<Flights> {
+
+        private LayoutInflater mInflater;
+
+        /**
+         * ViewHolder class for layout.<br />
+         * <br />
+         * Auto-created on 2016-06-22 17:19:07 by Android Layout Finder
+         * (http://www.buzzingandroid.com/tools/android-layout-finder)
+         */
+        private static class ViewHolder {
+            public final LinearLayout rootView;
+            public final TextView textTimeFrom;
+            public final TextView textTimeTo;
+            public final TextView textPrice;
+
+            private ViewHolder(LinearLayout rootView, TextView textTimeFrom, TextView textTimeTo, TextView textPrice) {
+                this.rootView = rootView;
+                this.textTimeFrom = textTimeFrom;
+                this.textTimeTo = textTimeTo;
+                this.textPrice = textPrice;
+            }
+
+            public static ViewHolder create(LinearLayout rootView) {
+                TextView textTimeFrom = (TextView)rootView.findViewById( R.id.textTimeFrom );
+                TextView textTimeTo = (TextView)rootView.findViewById( R.id.textTimeTo );
+                TextView textPrice = (TextView)rootView.findViewById( R.id.textPrice );
+                return new ViewHolder( rootView, textTimeFrom, textTimeTo, textPrice );
+            }
+        }
+
+        public FlightsAdapter(Context context, RealmResults<Flights> data, boolean automaticUpdate, LayoutInflater mInflater) {
+            super(context, data, automaticUpdate);
+            this.mInflater = mInflater;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            final ViewHolder vh;
+            if ( convertView == null ) {
+                View view = mInflater.inflate( R.layout.item_flight, parent, false );
+                vh = ViewHolder.create( (LinearLayout)view );
+                view.setTag( vh );
+            } else {
+                vh = (ViewHolder)convertView.getTag();
+            }
+
+            Flights item = getItem( position );
+
+            vh.textTimeFrom.setText(DateHelper.formatToDisplay(item.getDateFrom()));
+            vh.textTimeTo.setText(DateHelper.formatToDisplay(item.getDateTo()));
+            String priceString = item.getCurrency()+ String.format("%.02f", item.getPrice());
+            vh.textPrice.setText(priceString);
+
+            return vh.rootView;
+        }
+    }
+
+
 }

@@ -29,4 +29,18 @@ public class DateHelper {
         return serverDateFormat.format(calendar.getTime());
     }
 
+    public static String formatToDisplay(Date date){
+        if(date==null){
+            return "-";
+        }
+        return displayDateFormat.format(date);
+    }
+
+    public static String formatForServer(Date date){
+        if(date==null){
+            return null;
+        }
+        return serverDateFormat.format(date);
+    }
+
 }
