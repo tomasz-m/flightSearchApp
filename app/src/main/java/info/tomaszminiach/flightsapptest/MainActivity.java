@@ -51,8 +51,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         progressBar = findViewById(R.id.progressBar);
         recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
 
-        fromDateCalendar = Calendar.getInstance();
-        toDateCalendar = Calendar.getInstance();
+        fromDateCalendar = DateHelper.getCurrentDateMidnight();
+        toDateCalendar = DateHelper.getCurrentDateMidnight();
+
+
         if (savedInstanceState != null) {
             long fromMilliseconds = savedInstanceState.getLong(TAG_START_BUTTON);
             long toMilliseconds = savedInstanceState.getLong(TAG_END_BUTTON);

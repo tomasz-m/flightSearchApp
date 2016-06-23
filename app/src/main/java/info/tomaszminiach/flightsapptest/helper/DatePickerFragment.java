@@ -45,7 +45,9 @@ public class DatePickerFragment extends DialogFragment
 
     public void onDateSet(DatePicker view, int year, int month, int day) {
         Calendar c = Calendar.getInstance();
-        c.set(year,month,day);
+        c.set(year,month,day,0,0,0);
+        c.set(Calendar.MILLISECOND,0);
+
         //I know this dependency to the SimpleSingleObserver is not nice, would be better to
         SimpleSingleObserver.sendEvent(getTag(),c);
     }
